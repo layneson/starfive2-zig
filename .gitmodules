@@ -1,0 +1,6 @@
+[submodule "tools/JH71xx-tools"]
+	path = tools/JH71xx-tools
+	url = https://github.com/xypron/JH71xx-tools
+[submodule "tools/starfive-tech-Tools"]
+	path = tools/starfive-tech-Tools
+	url = https://github.com/starfive-tech/Tools

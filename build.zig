@@ -9,20 +9,24 @@ pub fn build(b: *Build) void {
     };
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
-        .name = "visionfive2",
-        .root_source_file = .{ .path = "src/main.zig" },
+    const spl_exe_name = "spl";
+    const spl_exe_bin_name = "spl.bin";
+    const spl_exe_headerified_name = "spl.bin.normal.out";
+
+    const spl_exe = b.addExecutable(.{
+        .name = spl_exe_name,
+        .root_source_file = .{ .path = "src/spl/spl.zig" },
         .target = target,
         .optimize = optimize,
     });
-    exe.setLinkerScriptPath(.{ .path = "visionfive2.ld" });
-    b.installArtifact(exe);
+    spl_exe.setLinkerScriptPath(.{ .path = "src/spl/spl.ld" });
+    b.installArtifact(spl_exe);
 
-    const obj_copy = exe.addObjCopy(.{
-        .basename = "visionfive2.bin",
+    const obj_copy = spl_exe.addObjCopy(.{
+        .basename = spl_exe_bin_name,
         .format = .bin,
     });
-    const copy_bin = b.addInstallFileWithDir(.{ .generated = &obj_copy.output_file }, .bin, "visionfive2.bin");
+    const copy_bin = b.addInstallFileWithDir(.{ .generated = &obj_copy.output_file }, .bin, spl_exe_bin_name);
     copy_bin.step.dependOn(&obj_copy.step);
     b.getInstallStep().dependOn(&copy_bin.step);
 
@@ -43,9 +47,9 @@ pub fn build(b: *Build) void {
     spl_tool_step.addArgs(&.{ "-c", "-f" });
     spl_tool_step.addFileSourceArg(obj_copy.getOutputSource());
     spl_tool_step.addArg("-o");
-    const spl_tool_output = spl_tool_step.addOutputFileArg("visionfive2.bin.normal.out");
+    const spl_tool_output = spl_tool_step.addOutputFileArg(spl_exe_headerified_name);
     b.getInstallStep().dependOn(&spl_tool_step.step);
-    b.getInstallStep().dependOn(&b.addInstallBinFile(spl_tool_output, "visionfive2.bin.normal.out").step);
+    b.getInstallStep().dependOn(&b.addInstallBinFile(spl_tool_output, spl_exe_headerified_name).step);
 
     const vf2_recover_exe = b.addExecutable(.{
         .name = "vf2-recover",

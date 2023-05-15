@@ -3,15 +3,33 @@ const std = @import("std");
 const stack_size = 4 * 1024;
 var stack: [stack_size]u8 linksection(".bss.uninit") = undefined;
 
+const mtime = @intToPtr(*volatile u64, 0x200_0000 + 0xBFF8);
+const mtime_freq = 4_000_000;
+
 pub export fn _start() linksection(".start") callconv(.Naked) noreturn {
     enableAllFeatures();
 
-    if (getHartId() == 1) {
+    if (getHartId() == 0) {
         setStackPointer(@ptrToInt(&stack) + stack_size);
         @call(.never_inline, main, .{});
     }
 
     while (true) {}
+}
+
+fn main() noreturn {
+    uart0_writer.print("stack pointer: 0x{x}\r\n", .{@call(.always_inline, getStackPointer, .{})}) catch unreachable;
+    for (0..1_000_000) |i| {
+        uart0_writer.print("  counter: {d}, mtime: {d}\r\n", .{ i, mtime.* }) catch unreachable;
+        delayMs(1000);
+    }
+
+    while (true) {}
+}
+
+fn delayMs(ms: u64) void {
+    const end_tick = mtime.* + (ms * mtime_freq / 1_000);
+    while (mtime.* < end_tick) {}
 }
 
 fn getHartId() u32 {
@@ -48,10 +66,6 @@ fn getStackPointer() u64 {
         \\
         : [ret] "={sp}" (-> u64),
     );
-}
-
-fn main() void {
-    uart0_writer.print("stack pointer: 0x{x}\r\n", .{@call(.always_inline, getStackPointer, .{})}) catch unreachable;
 }
 
 pub fn panic(message: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {

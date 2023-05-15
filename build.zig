@@ -7,7 +7,7 @@ pub fn build(b: *Build) void {
         .os_tag = .freestanding,
         .abi = .eabi,
     };
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize = .ReleaseSmall; // b.standardOptimizeOption(.{});
 
     const spl_exe_name = "spl";
     const spl_exe_bin_name = "spl.bin";

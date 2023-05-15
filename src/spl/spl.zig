@@ -61,18 +61,18 @@ fn setStackPointer(top: usize) void {
     );
 }
 
-fn getStackPointer() u64 {
+fn getStackPointer() usize {
     return asm volatile (
         \\
-        : [ret] "={sp}" (-> u64),
+        : [ret] "={sp}" (-> usize),
     );
 }
 
 pub fn panic(message: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
-    _ = message;
     _ = error_return_trace;
     _ = ret_addr;
 
+    uart0_writer.print("[!][!] PANIC: {s}\r\n", .{message}) catch unreachable;
     while (true) {}
 }
 

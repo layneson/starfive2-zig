@@ -6,21 +6,19 @@ SECTIONS {
 		*(.start);
 		*(.text*);
 	}
-	/*
     .bss : ALIGN(4K) {
-		PROVIDE(bss_start = .);
-		*(.bss);
-		. += 4096;
-		PROVIDE(stack_top = .);
-		. += 4096;
-		PROVIDE(global_pointer = .);
-		PROVIDE(bss_end = .);
+		PROVIDE(_bss_start = .);
+		*(.bss*);
+		/* PROVIDE(_global_pointer = .); */
+		PROVIDE(_bss_end = .);
 	}
-    */
 	.rodata : ALIGN(4K) {
 		*(.rodata*);
 	}
 	.data : ALIGN(4K) {
 		*(.data*);
+	}
+	.sdata : ALIGN(4K) {
+		*(.sdata*);
 	}
 }

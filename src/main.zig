@@ -1,7 +1,15 @@
 const std = @import("std");
 
+const stack_size = 4 * 1024;
+var stack: [stack_size]u8 linksection(".bss.uninit") = undefined;
+
 pub export fn _start() linksection(".start") callconv(.Naked) noreturn {
-    if (getHartId() == 1) @call(.never_inline, main, .{});
+    enableAllFeatures();
+
+    if (getHartId() == 1) {
+        setStackPointer(@ptrToInt(&stack) + stack_size);
+        @call(.never_inline, main, .{});
+    }
 
     while (true) {}
 }
@@ -14,8 +22,36 @@ fn getHartId() u32 {
     );
 }
 
+// This is not necessary (at least to get stack and such set up).
+// TODO: What does this enable exactly?
+fn enableAllFeatures() void {
+    // Copied from Oreboot.
+    asm volatile (
+    // Clear feature disable CSR to '0' to turn on all features
+        \\csrwi  0x7c1, 0
+        \\csrw   mie, zero
+        \\csrw   mstatus, zero
+        \\csrw   mtvec, zero
+    );
+}
+
+fn setStackPointer(top: usize) void {
+    asm volatile (
+        \\
+        :
+        : [top] "{sp}" (top),
+    );
+}
+
+fn getStackPointer() u64 {
+    return asm volatile (
+        \\
+        : [ret] "={sp}" (-> u64),
+    );
+}
+
 fn main() void {
-    uart0Write("Hello, world and friends!\r\n");
+    uart0_writer.print("stack pointer: 0x{x}\r\n", .{@call(.always_inline, getStackPointer, .{})}) catch unreachable;
 }
 
 pub fn panic(message: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
@@ -26,17 +62,31 @@ pub fn panic(message: []const u8, error_return_trace: ?*std.builtin.StackTrace, 
     while (true) {}
 }
 
-const uart0_base = 0x1000_0000;
-const uart0_THR = @intToPtr(*volatile u32, uart0_base + 0x0000);
-const uart0_LSR = @intToPtr(*volatile u32, uart0_base + 0x0014);
+const uart0_writer = Uart0Writer.Writer{ .context = .{} };
 
-fn uart0Write(string: []const u8) void {
-    for (string) |byte| {
-        uart0WriteByte(byte);
+const Uart0Writer = struct {
+    pub const Error = error{};
+    pub const Writer = std.io.Writer(Uart0Writer, Error, write);
+
+    fn write(self: Uart0Writer, buffer: []const u8) Error!usize {
+        _ = self;
+
+        uart0Write(buffer);
+        return buffer.len;
     }
-}
 
-fn uart0WriteByte(byte: u8) void {
-    while ((uart0_LSR.* & 0x20) == 0) {}
-    uart0_THR.* = byte;
-}
+    const uart0_base = 0x1000_0000;
+    const uart0_THR = @intToPtr(*volatile u32, uart0_base + 0x0000);
+    const uart0_LSR = @intToPtr(*volatile u32, uart0_base + 0x0014);
+
+    fn uart0Write(string: []const u8) void {
+        for (string) |byte| {
+            uart0WriteByte(byte);
+        }
+    }
+
+    fn uart0WriteByte(byte: u8) void {
+        while ((uart0_LSR.* & 0x20) == 0) {}
+        uart0_THR.* = byte;
+    }
+};

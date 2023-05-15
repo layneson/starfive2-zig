@@ -15,7 +15,7 @@ fn getHartId() u32 {
 }
 
 fn main() void {
-    uart0Write("Hello, world!\r\n");
+    uart0Write("Hello, world and friends!\r\n");
 }
 
 pub fn panic(message: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
